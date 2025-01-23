@@ -1,104 +1,76 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!SIGNING_SECRET) {
-    throw new Error(
-      "Error: Please add SIGNING_SECRET from Clerk Dashboard to .env or .env.local"
-    );
+    console.error("CLERK_WEBHOOK_SECRET is missing");
+    return new Response("Server configuration error", { status: 500 });
   }
 
-  // Create new Svix instance with secret
   const wh = new Webhook(SIGNING_SECRET);
-
-  // Get headers
   const headerPayload = await headers();
-  const svix_id = headerPayload.get("svix-id");
-  const svix_timestamp = headerPayload.get("svix-timestamp");
-  const svix_signature = headerPayload.get("svix-signature");
 
-  // If there are no headers, error out
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response("Error: Missing Svix headers", {
-      status: 400,
-    });
+  // Перевіряємо та перетворюємо всі значення на строки
+  const svixHeaders = {
+    "svix-id": headerPayload.get("svix-id") || "",
+    "svix-timestamp": headerPayload.get("svix-timestamp") || "",
+    "svix-signature": headerPayload.get("svix-signature") || "",
+  };
+
+  // Перевіряємо, чи всі необхідні заголовки присутні
+  if (
+    !svixHeaders["svix-id"] ||
+    !svixHeaders["svix-timestamp"] ||
+    !svixHeaders["svix-signature"]
+  ) {
+    console.error("Missing Svix headers");
+    return new Response("Invalid request headers", { status: 400 });
   }
 
-  // Get body
   const payload = await req.json();
   const body = JSON.stringify(payload);
 
   let evt: WebhookEvent;
-
-  // Verify payload with headers
   try {
-    evt = wh.verify(body, {
-      "svix-id": svix_id,
-      "svix-timestamp": svix_timestamp,
-      "svix-signature": svix_signature,
-    }) as WebhookEvent;
+    evt = wh.verify(body, svixHeaders) as WebhookEvent;
   } catch (err) {
-    console.error("Error: Could not verify webhook:", err);
-    return new Response("Error: Verification error", {
-      status: 400,
-    });
+    console.error("Webhook verification failed:", err);
+    return new Response("Invalid webhook signature", { status: 400 });
   }
 
-  const eventType = evt.type;
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = await createClient();
 
-  if (eventType === "user.created") {
-    const { username, image_url } = payload.data;
-    const userData = {
-      username: username,
-      image_url: image_url,
-    };
-
-    const { error } = await supabase.from("users").insert([userData]);
-    if (error) {
-      console.error("Error inserting data:", error);
+  switch (evt.type) {
+    case "user.created": {
+      const { id, username, image_url } = payload.data;
+      const { error } = await supabase
+        .from("users")
+        .insert([{ user_id: id, username, image_url }]);
+      if (error) console.error("Error inserting data:", error);
+      break;
     }
-  }
-
-  if (eventType === "user.updated") {
-    const { id, username, image_url } = payload.data;
-    const userData = {
-      username: username,
-      image_url: image_url,
-    };
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { error } = await supabase
-      .from("users")
-      .update(userData)
-      .eq("id", id);
-    if (error) {
-      console.error("Error updating data:", error);
+    case "user.updated": {
+      const { id, username, image_url } = payload.data;
+      const { error } = await supabase
+        .from("users")
+        .update({ username, image_url })
+        .eq("user_id", id);
+      if (error) console.error("Error updating data:", error);
+      break;
     }
-  }
-
-  if (eventType === "user.deleted") {
-    const { id } = payload.data;
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { error } = await supabase.from("users").delete().eq("id", id);
-    if (error) {
-      console.error("Error deleting data:", error);
+    case "user.deleted": {
+      const { id } = payload.data;
+      const { error } = await supabase.from("users").delete().eq("user_id", id);
+      if (error) console.error("Error deleting data:", error);
+      break;
     }
+    default:
+      console.warn("Unhandled event type:", evt.type);
   }
 
-  return new Response("Webhook received", { status: 200 });
+  return new Response("Webhook processed", { status: 200 });
 }
