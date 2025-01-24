@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Metadata } from "next";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Gnitch",
@@ -25,6 +26,7 @@ export default function RootLayout({
             storageKey="gnitch-theme"
             disableTransitionOnChange
           >
+            <Toaster theme="light" position="top-right" />
             {children}
           </ThemeProvider>
         </body>

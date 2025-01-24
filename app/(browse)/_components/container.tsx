@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useMediaQuery } from "@/hooks/udeMediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/store/use-sidebar";
