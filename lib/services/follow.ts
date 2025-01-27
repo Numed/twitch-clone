@@ -1,17 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./init";
 import { getSelf } from "@/lib/services/auth";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-export const isFollowingUser = async (id: string) => {
+export const isFollowingUser = async (id: number) => {
   try {
     const self = await getSelf();
 
     const { data: existingFollow, error } = await supabase
-      .from("Follow")
+      .from("follow")
       .select("id")
       .eq("follower_id", self.id)
       .eq("following_id", id)
@@ -27,7 +22,7 @@ export const isFollowingUser = async (id: string) => {
   }
 };
 
-export const followUser = async (id: string) => {
+export const followUser = async (id: number) => {
   const self = await getSelf();
 
   if (self.id === id) {
@@ -35,7 +30,7 @@ export const followUser = async (id: string) => {
   }
 
   const { data: existingFollow, error: findError } = await supabase
-    .from("Follow")
+    .from("follow")
     .select("id")
     .eq("follower_id", self.id)
     .eq("following_id", id)
@@ -50,7 +45,7 @@ export const followUser = async (id: string) => {
   }
 
   const { data: follow, error } = await supabase
-    .from("Follow")
+    .from("follow")
     .insert({
       follower_id: self.id,
       following_id: id,
@@ -61,7 +56,7 @@ export const followUser = async (id: string) => {
   return follow;
 };
 
-export const unfollowUser = async (id: string) => {
+export const unfollowUser = async (id: number) => {
   const self = await getSelf();
 
   if (self.id === id) {
@@ -69,7 +64,7 @@ export const unfollowUser = async (id: string) => {
   }
 
   const { data: existingFollow, error: findError } = await supabase
-    .from("Follow")
+    .from("follow")
     .select("id")
     .eq("follower_id", self.id)
     .eq("following_id", id)
@@ -84,7 +79,7 @@ export const unfollowUser = async (id: string) => {
   }
 
   const { data: follow, error } = await supabase
-    .from("Follow")
+    .from("follow")
     .delete()
     .eq("id", existingFollow.id)
     .select();
@@ -98,7 +93,7 @@ export const getFollowedUsers = async () => {
     const self = await getSelf();
 
     const { data: followedUsers, error } = await supabase
-      .from("Follow")
+      .from("follow")
       .select(
         `
         following (

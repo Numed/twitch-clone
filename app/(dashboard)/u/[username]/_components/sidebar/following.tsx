@@ -6,7 +6,7 @@ import { useSidebar } from "@/store/use-sidebar";
 
 import { UserItem, UserItemSkeleton } from "./user-item";
 
-type  FollowingProps = {
+interface FollowingProps {
   data: (Follow & {
     following: User & {
       stream: { isLive: boolean } | null;

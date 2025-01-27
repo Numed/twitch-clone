@@ -1,10 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { getSelf } from "@/lib/services/auth";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from "./init";
 
 export const getRecommended = async () => {
   let userId: string | null;
@@ -18,31 +13,30 @@ export const getRecommended = async () => {
 
   let users: unknown = [];
   if (userId) {
-    // Отримати всіх користувачів, окрім себе
     const { data: allUsers, error: userError } = await supabase
-      .from("User")
+      .from("user")
       .select(
         `
         id,
+        user_id,
         email,
         username,
         stream(isLive),
-        createdAt
+        created_at
       `
       )
-      .neq("id", userId)
-      .order("createdAt", { ascending: false });
+      .neq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (userError) throw new Error(userError.message);
 
-    // Отримати списки підписок та блокувань
     const { data: following, error: followingError } = await supabase
-      .from("Follow")
+      .from("follow")
       .select("following_id")
       .eq("follower_id", userId);
 
     const { data: blocked, error: blockedError } = await supabase
-      .from("Block")
+      .from("block")
       .select("blocked_id")
       .eq("blocker_id", userId);
 
@@ -58,19 +52,19 @@ export const getRecommended = async () => {
         (u) => !followingIds.includes(u.id) && !blockedIds.includes(u.id)
       ) || [];
   } else {
-    // Для гостей
     const { data, error } = await supabase
-      .from("User")
+      .from("user")
       .select(
         `
         id,
+        user_id,
         email,
         username,
         stream(isLive),
-        createdAt
+        created_at
       `
       )
-      .order("createdAt", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (error) throw new Error(error.message);
     users = data || [];

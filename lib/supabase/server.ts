@@ -1,12 +1,12 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
+import { createBrowserClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-export async function createClient() {
+export async function createClientSSR() {
   const cookieStore = await cookies();
   const { getToken } = await auth();
 
-  return createServerClient(
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -26,8 +26,7 @@ export async function createClient() {
             console.error("Failed to retrieve Clerk token");
             throw new Error("Authentication error");
           }
-
-          const headers = new Headers(options.headers || {});
+          const headers = new Headers(options?.headers);
           headers.set("Authorization", `Bearer ${clerkToken}`);
 
           return fetch(url, {
