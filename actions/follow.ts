@@ -8,6 +8,11 @@ import { getSelf } from "@/lib/auth-service";
 export const onFollow = async (id: string) => {
   try {
     const self = await getSelf();
+
+    if (self.id === id) {
+      throw new Error("You cannot follow yourself");
+    }
+
     const followedUser = await followUser(id);
 
     revalidatePath("/");
@@ -20,7 +25,7 @@ export const onFollow = async (id: string) => {
     return followedUser;
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(error.message);
+      throw error;
     }
     throw new Error("Internal Error");
   }
@@ -29,6 +34,11 @@ export const onFollow = async (id: string) => {
 export const onUnfollow = async (id: string) => {
   try {
     const self = await getSelf();
+
+    if (self.id === id) {
+      throw new Error("You cannot unfollow yourself");
+    }
+
     const unfollowedUser = await unfollowUser(id);
 
     revalidatePath("/");
@@ -41,7 +51,7 @@ export const onUnfollow = async (id: string) => {
     return unfollowedUser;
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(error.message);
+      throw error;
     }
     throw new Error("Internal Error");
   }

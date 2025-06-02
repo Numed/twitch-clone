@@ -10,6 +10,8 @@ import {
 } from "@livekit/components-react";
 
 import { ChatVariant, useChatSidebar } from "@/store/use-chat-sidebar";
+import { getSelf } from "@/lib/auth-service";
+import { db } from "@/lib/db";
 
 import { ChatForm, ChatFormSkeleton } from "./chat-form";
 import { ChatList, ChatListSkeleton } from "./chat-list";
@@ -39,10 +41,47 @@ export const Chat = ({
   const { variant, onExpand } = useChatSidebar((state) => state);
   const connectionState = useConnectionState();
   const participant = useRemoteParticipant(hostIdentity);
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    const checkBlocked = async () => {
+      try {
+        const self = await getSelf();
+
+        // Check if we have blocked the host
+        const blockedBySelf = await db.block.findUnique({
+          where: {
+            blockerId_blockedId: {
+              blockerId: self.id,
+              blockedId: hostIdentity,
+            },
+          },
+        });
+
+        // Check if the host has blocked us
+        const blockedByHost = await db.block.findUnique({
+          where: {
+            blockerId_blockedId: {
+              blockerId: hostIdentity,
+              blockedId: self.id,
+            },
+          },
+        });
+
+        setIsBlocked(!!(blockedBySelf || blockedByHost));
+      } catch {
+        setIsBlocked(false);
+      }
+    };
+
+    checkBlocked();
+    const interval = setInterval(checkBlocked, 1000); // Check more frequently
+    return () => clearInterval(interval);
+  }, [hostIdentity]);
 
   const isOnline = participant && connectionState === ConnectionState.Connected;
 
-  const isHidden = !isChatEnabled || !isOnline;
+  const isHidden = !isChatEnabled || !isOnline || isBlocked;
 
   const [value, setValue] = useState("");
   const { chatMessages: messages, send } = useChat();

@@ -11,6 +11,10 @@ import { ChatToggle } from "./chat-toggle";
 import { Chat, ChatSkeleton } from "./chat";
 import { Video, VideoSkeleton } from "./video";
 import { Header, HeaderSkeleton } from "./header";
+import { useState, useEffect } from "react";
+import { isBlockedByUser } from "@/lib/block-service";
+import { useRouter } from "next/navigation";
+import { isFollowingUser } from "@/lib/follow-service";
 
 type CustomStream = {
   id: string;
@@ -40,14 +44,85 @@ interface StreamPlayerProps {
 export const StreamPlayer = ({
   user,
   stream,
-  isFollowing,
+  isFollowing: initialIsFollowing,
 }: StreamPlayerProps) => {
   const { token, name, identity } = useViewerToken(user.id);
   const { collapsed } = useChatSidebar((state) => state);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+  const router = useRouter();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkBlocked = async () => {
+      try {
+        const blocked = await isBlockedByUser(user.id);
+        if (blocked && isMounted) {
+          setIsBlocked(true);
+          router.refresh();
+        }
+      } catch (error) {
+        console.error("Error checking block status:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const checkFollowing = async () => {
+      try {
+        const following = await isFollowingUser(user.id);
+        if (isMounted) {
+          setIsFollowing(following);
+        }
+      } catch (error) {
+        console.error("Error checking follow status:", error);
+      }
+    };
+
+    checkBlocked();
+    checkFollowing();
+    // Check more frequently
+    const interval = setInterval(() => {
+      checkBlocked();
+      checkFollowing();
+    }, 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user.id, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-lg text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (isBlocked) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-lg text-muted-foreground">
+          You are blocked from viewing this stream
+        </p>
+      </div>
+    );
+  }
 
   if (!token || !name || !identity) {
-    return <StreamPlayerSkeleton />;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-lg text-muted-foreground">Loading...</p>
+      </div>
+    );
   }
+
   return (
     <>
       {collapsed && (

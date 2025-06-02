@@ -31,15 +31,27 @@ export const ChatCommunity = ({
   };
 
   const filteredParticipants = useMemo(() => {
-    const deduped = participants.reduce((acc, participant) => {
-      const hostAsViewer = `Host-${participant.identity}`;
-      if (!acc.some((p) => p.identity === hostAsViewer)) {
-        acc.push(participant);
-      }
-      return acc;
-    }, [] as (RemoteParticipant | LocalParticipant)[]);
+    // Create a map to store unique participants by their normalized identity
+    const uniqueParticipants = new Map<
+      string,
+      RemoteParticipant | LocalParticipant
+    >();
 
-    return deduped.filter((participant) => {
+    participants.forEach((participant) => {
+      // Normalize the identity by removing host- or viewer- prefix
+      const normalizedIdentity = participant.identity.replace(
+        /^(host-|viewer-)/,
+        ""
+      );
+
+      // Only add if we haven't seen this identity before
+      if (!uniqueParticipants.has(normalizedIdentity)) {
+        uniqueParticipants.set(normalizedIdentity, participant);
+      }
+    });
+
+    // Convert map values to array and filter by search
+    return Array.from(uniqueParticipants.values()).filter((participant) => {
       return participant.name
         ?.toLowerCase()
         .includes(debouncedValue.toLowerCase());

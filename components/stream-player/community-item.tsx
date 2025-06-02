@@ -1,13 +1,16 @@
 "use client";
 
 import { toast } from "sonner";
-import { useTransition } from "react";
+import { useTransition, useState, useEffect } from "react";
 import { MinusCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { Hint } from "@/components/hint";
 import { onBlock } from "@/actions/block";
 import { cn, stringToColor } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { getSelf } from "@/lib/auth-service";
+import { db } from "@/lib/db";
 
 interface CommunityItemProps {
   hostName: string;
@@ -23,20 +26,76 @@ export const CommunityItem = ({
   participantName,
 }: CommunityItemProps) => {
   const [isPending, startTransition] = useTransition();
+  const [isBlocked, setIsBlocked] = useState(false);
+  const router = useRouter();
+
+  // Remove viewer- or host- prefix from identity
+  const normalizedIdentity = participantIdentity.replace(
+    /^(viewer-|host-)/,
+    ""
+  );
+
+  useEffect(() => {
+    const checkBlocked = async () => {
+      try {
+        const self = await getSelf();
+        // Check both directions of blocking
+        const blockedBySelf = await db.block.findUnique({
+          where: {
+            blockerId_blockedId: {
+              blockerId: self.id,
+              blockedId: normalizedIdentity,
+            },
+          },
+        });
+
+        const blockedByOther = await db.block.findUnique({
+          where: {
+            blockerId_blockedId: {
+              blockerId: normalizedIdentity,
+              blockedId: self.id,
+            },
+          },
+        });
+
+        setIsBlocked(!!(blockedBySelf || blockedByOther));
+      } catch (error) {
+        console.error("Error checking block status:", error);
+        setIsBlocked(false);
+      }
+    };
+
+    checkBlocked();
+    const interval = setInterval(checkBlocked, 1000);
+    return () => clearInterval(interval);
+  }, [normalizedIdentity]);
 
   const color = stringToColor(participantName || "");
-  const isSelf = participantName === viewerName;
+  const isSelf =
+    participantName === viewerName || normalizedIdentity === viewerName;
   const isHost = viewerName === hostName;
 
   const handleBlock = () => {
     if (!participantName || isSelf || !isHost) return;
 
     startTransition(() => {
-      onBlock(participantIdentity)
-        .then(() => toast.success(`Blocked ${participantName}`))
-        .catch(() => toast.error("Something went wrong"));
+      onBlock(normalizedIdentity)
+        .then(() => {
+          toast.success(`Blocked ${participantName}`);
+          setIsBlocked(true);
+          // Force a hard refresh to ensure complete disconnection
+          window.location.reload();
+        })
+        .catch((error) => {
+          console.error("Block error:", error);
+          toast.error(error.message || "Failed to block user");
+        });
     });
   };
+
+  if (isBlocked) {
+    return null;
+  }
 
   return (
     <div

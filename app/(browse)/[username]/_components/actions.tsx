@@ -1,7 +1,8 @@
 "use client";
 
 import { toast } from "sonner";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 import { onBlock, onUnblock } from "@/actions/block";
 import { onFollow, onUnfollow } from "@/actions/follow";
@@ -12,15 +13,23 @@ interface ActionsProps {
   userId: string;
 }
 
-export const Actions = ({ isFollowing, userId }: ActionsProps) => {
+export const Actions = ({
+  isFollowing: initialIsFollowing,
+  userId,
+}: ActionsProps) => {
   const [isPending, startTransition] = useTransition();
+  const { userId: currentUserId } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+
+  console.log(isFollowing, initialIsFollowing);
 
   const handleFollow = () => {
     startTransition(() => {
       onFollow(userId)
-        .then((data) =>
-          toast.success(`You are now following ${data.following.username}`)
-        )
+        .then((data) => {
+          setIsFollowing(true);
+          toast.success(`You are now following ${data.following.username}`);
+        })
         .catch(() => toast.error("Something went wrong"));
     });
   };
@@ -28,14 +37,17 @@ export const Actions = ({ isFollowing, userId }: ActionsProps) => {
   const handleUnfollow = () => {
     startTransition(() => {
       onUnfollow(userId)
-        .then((data) =>
-          toast.success(`You have unfollowed ${data.following.username}`)
-        )
+        .then((data) => {
+          setIsFollowing(false);
+          toast.success(`You have unfollowed ${data.following.username}`);
+        })
         .catch(() => toast.error("Something went wrong"));
     });
   };
 
   const onClick = () => {
+    if (currentUserId === userId) return;
+
     if (isFollowing) {
       handleUnfollow();
     } else {
@@ -55,7 +67,11 @@ export const Actions = ({ isFollowing, userId }: ActionsProps) => {
 
   return (
     <>
-      <Button disabled={isPending} onClick={onClick} variant="primary">
+      <Button
+        disabled={isPending || currentUserId === userId}
+        onClick={onClick}
+        variant="primary"
+      >
         {isFollowing ? "Unfollow" : "Follow"}
       </Button>
       <Button onClick={handleBlock} disabled={isPending}>

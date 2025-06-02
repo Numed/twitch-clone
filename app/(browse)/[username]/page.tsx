@@ -22,7 +22,13 @@ const UserPage = async ({ params }: UserPageProps) => {
   const isBlocked = await isBlockedByUser(user.id);
 
   if (isBlocked) {
-    notFound();
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-lg text-muted-foreground">
+          You are blocked from viewing this stream
+        </p>
+      </div>
+    );
   }
 
   return (
