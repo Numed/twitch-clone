@@ -1,0 +1,72 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  email          String   @unique
+  username       String   @unique
+  imageUrl       String   @db.String
+  externalUserId String   @unique
+  bio            String?  @db.String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  following      Follow[] @relation(name: "Following")
+  followedBy     Follow[] @relation(name: "FollowedBy")
+  blocking       Block[]  @relation(name: "Blocking")
+  blockedby      Block[]  @relation(name: "BlockedBy")
+  stream         Stream?
+}
+
+model Follow {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  follower    User     @relation(name: "Following", fields: [followerId], references: [id])
+  followerId  String   @db.ObjectId
+  following   User     @relation(name: "FollowedBy", fields: [followingId], references: [id])
+  followingId String   @db.ObjectId
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String?  @db.ObjectId
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Block {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  blockerId String @db.ObjectId
+  blockedId String @db.ObjectId
+
+  blocker User @relation(name: "Blocking", fields: [blockerId], references: [id])
+  blocked User @relation(name: "BlockedBy", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model Stream {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  title               String
+  thumbnail           String?
+  ingressId           String?  @unique
+  serverUrl           String?
+  streamKey           String?
+  isLive              Boolean  @default(false)
+  isChatEnabled       Boolean  @default(true)
+  isChatDelayed       Boolean  @default(false)
+  isChatFollowersOnly Boolean  @default(false)
+  userId              String   @unique @db.ObjectId
+  user                User     @relation(fields: [userId], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
