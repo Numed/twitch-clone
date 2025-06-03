@@ -6,11 +6,9 @@ import { MinusCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Hint } from "@/components/hint";
-import { onBlock } from "@/actions/block";
+import { onBlock, isBlockedByUser } from "@/actions/block";
 import { cn, stringToColor } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getSelf } from "@/lib/auth-service";
-import { db } from "@/lib/db";
 
 interface CommunityItemProps {
   hostName: string;
@@ -38,27 +36,8 @@ export const CommunityItem = ({
   useEffect(() => {
     const checkBlocked = async () => {
       try {
-        const self = await getSelf();
-        // Check both directions of blocking
-        const blockedBySelf = await db.block.findUnique({
-          where: {
-            blockerId_blockedId: {
-              blockerId: self.id,
-              blockedId: normalizedIdentity,
-            },
-          },
-        });
-
-        const blockedByOther = await db.block.findUnique({
-          where: {
-            blockerId_blockedId: {
-              blockerId: normalizedIdentity,
-              blockedId: self.id,
-            },
-          },
-        });
-
-        setIsBlocked(!!(blockedBySelf || blockedByOther));
+        const blocked = await isBlockedByUser(normalizedIdentity);
+        setIsBlocked(blocked);
       } catch (error) {
         console.error("Error checking block status:", error);
         setIsBlocked(false);
@@ -83,8 +62,6 @@ export const CommunityItem = ({
         .then(() => {
           toast.success(`Blocked ${participantName}`);
           setIsBlocked(true);
-          // Force a hard refresh to ensure complete disconnection
-          window.location.reload();
         })
         .catch((error) => {
           console.error("Block error:", error);

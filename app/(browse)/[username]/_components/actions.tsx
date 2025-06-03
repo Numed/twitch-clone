@@ -21,8 +21,6 @@ export const Actions = ({
   const { userId: currentUserId } = useAuth();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
 
-  console.log(isFollowing, initialIsFollowing);
-
   const handleFollow = () => {
     startTransition(() => {
       onFollow(userId)
@@ -65,16 +63,18 @@ export const Actions = ({
     });
   };
 
+  const isHost = currentUserId === userId;
+
   return (
     <>
       <Button
-        disabled={isPending || currentUserId === userId}
+        disabled={isPending || isHost}
         onClick={onClick}
         variant="primary"
       >
         {isFollowing ? "Unfollow" : "Follow"}
       </Button>
-      <Button onClick={handleBlock} disabled={isPending}>
+      <Button onClick={handleBlock} disabled={isPending || isHost}>
         Block
       </Button>
     </>

@@ -12,9 +12,8 @@ import { Chat, ChatSkeleton } from "./chat";
 import { Video, VideoSkeleton } from "./video";
 import { Header, HeaderSkeleton } from "./header";
 import { useState, useEffect } from "react";
-import { isBlockedByUser } from "@/lib/block-service";
+import { isBlockedByUser } from "@/actions/block";
 import { useRouter } from "next/navigation";
-import { isFollowingUser } from "@/lib/follow-service";
 
 type CustomStream = {
   id: string;
@@ -44,13 +43,12 @@ interface StreamPlayerProps {
 export const StreamPlayer = ({
   user,
   stream,
-  isFollowing: initialIsFollowing,
+  isFollowing,
 }: StreamPlayerProps) => {
   const { token, name, identity } = useViewerToken(user.id);
   const { collapsed } = useChatSidebar((state) => state);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const router = useRouter();
 
   useEffect(() => {
@@ -59,9 +57,11 @@ export const StreamPlayer = ({
     const checkBlocked = async () => {
       try {
         const blocked = await isBlockedByUser(user.id);
-        if (blocked && isMounted) {
-          setIsBlocked(true);
-          router.refresh();
+        if (isMounted) {
+          setIsBlocked(blocked);
+          if (blocked) {
+            router.refresh();
+          }
         }
       } catch (error) {
         console.error("Error checking block status:", error);
@@ -72,23 +72,10 @@ export const StreamPlayer = ({
       }
     };
 
-    const checkFollowing = async () => {
-      try {
-        const following = await isFollowingUser(user.id);
-        if (isMounted) {
-          setIsFollowing(following);
-        }
-      } catch (error) {
-        console.error("Error checking follow status:", error);
-      }
-    };
-
     checkBlocked();
-    checkFollowing();
     // Check more frequently
     const interval = setInterval(() => {
       checkBlocked();
-      checkFollowing();
     }, 1000);
 
     return () => {
@@ -118,7 +105,11 @@ export const StreamPlayer = ({
   if (!token || !name || !identity) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-lg text-muted-foreground">Loading...</p>
+        <p className="text-lg text-muted-foreground">
+          {token === null
+            ? "You are blocked from viewing this stream"
+            : "Loading..."}
+        </p>
       </div>
     );
   }
@@ -137,6 +128,7 @@ export const StreamPlayer = ({
           "grid grid-cols-1 lg:gap-y-0 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 h-full",
           collapsed && "lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2"
         )}
+        style={{ height: "100%" }}
       >
         <div className="space-y-4 col-span-1 lg:col-span-2 xl:col-span-2 2xl:col-span-5 lg:overflow-y-auto hidden-scrollbar pb-10">
           <Video hostName={user.username} hostIdentity={user.id} />

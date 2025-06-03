@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 import { Heart } from "lucide-react";
-import { useTransition } from "react";
+import { useTransition, useState, useEffect } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 
@@ -19,19 +19,26 @@ interface ActionsProps {
 
 export const Actions = ({
   hostIdentity,
-  isFollowing,
+  isFollowing: initialIsFollowing,
   isHost,
 }: ActionsProps) => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { userId } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
+
+  useEffect(() => {
+    setIsFollowing(initialIsFollowing);
+  }, [initialIsFollowing]);
 
   const handleFollow = () => {
     startTransition(() => {
       onFollow(hostIdentity)
-        .then((data) =>
-          toast.success(`You are now following ${data.following.username}`)
-        )
+        .then((data) => {
+          setIsFollowing(true);
+          toast.success(`You are now following ${data.following.username}`);
+          router.refresh();
+        })
         .catch(() => toast.error("Something went wrong"));
     });
   };
@@ -39,9 +46,11 @@ export const Actions = ({
   const handleUnfollow = () => {
     startTransition(() => {
       onUnfollow(hostIdentity)
-        .then((data) =>
-          toast.success(`You have unfollowed ${data.following.username}`)
-        )
+        .then((data) => {
+          setIsFollowing(false);
+          toast.success(`You have unfollowed ${data.following.username}`);
+          router.refresh();
+        })
         .catch(() => toast.error("Something went wrong"));
     });
   };
