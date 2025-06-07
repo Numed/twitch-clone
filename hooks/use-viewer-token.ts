@@ -12,7 +12,6 @@ export const useViewerToken = (hostIdentity: string) => {
     const createToken = async () => {
       try {
         const viewrToken = await createViewerToken(hostIdentity);
-        
         if (viewrToken) {
           setToken(viewrToken);
 
