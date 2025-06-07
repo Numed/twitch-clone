@@ -24,8 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const RTMP = String(IngressInput.RTMP_INPUT);
-const WHIP = String(IngressInput.WHIP_INPUT);
+const RTMP = IngressInput.RTMP_INPUT;
+const WHIP = IngressInput.WHIP_INPUT;
 
 type IngressType = typeof RTMP | typeof WHIP;
 
@@ -36,7 +36,7 @@ export const ConnectModal = () => {
 
   const onSubmit = () => {
     startTransition(() => {
-      createIngress(parseInt(ingressType))
+      createIngress(ingressType)
         .then(() => {
           toast.success("Ingress created");
           closeRef?.current?.click();
@@ -56,15 +56,15 @@ export const ConnectModal = () => {
         </DialogHeader>
         <Select
           disabled={isPending}
-          value={ingressType}
-          onValueChange={(value) => setIngressType(value)}
+          value={String(ingressType)}
+          onValueChange={(value) => setIngressType(Number(value))}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Ingress Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={RTMP}>RTMP</SelectItem>
-            <SelectItem value={WHIP}>WHIP</SelectItem>
+            <SelectItem value={String(RTMP)}>RTMP</SelectItem>
+            <SelectItem value={String(WHIP)}>WHIP</SelectItem>
           </SelectContent>
         </Select>
         <Alert>

@@ -20,7 +20,7 @@ export const InfoCard = ({
   hostIdentity,
   viewerIdentity,
 }: InfoCardProps) => {
-  const hostAsViewer = `Host-${hostIdentity}`;
+  const hostAsViewer = `host-${hostIdentity}`;
   const isHost = viewerIdentity === hostAsViewer;
 
   if (!isHost) return null;

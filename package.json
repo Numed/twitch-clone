@@ -40,6 +40,8 @@
     "query-string": "^8.2.0",
     "react": "^18",
     "react-dom": "^18",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "sonner": "^1.4.0",
     "string-to-color": "^2.2.2",
     "svix": "^1.16.0",

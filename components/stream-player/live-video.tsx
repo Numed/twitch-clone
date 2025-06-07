@@ -7,6 +7,7 @@ import { useEventListener } from "usehooks-ts";
 
 import { VolumeControl } from "./volume-controle";
 import { FullscreenControl } from "./fullscreen-control";
+import { ConnectionStats } from "./connection-stats";
 
 interface LiveVideoProps {
   participant: Participant;
@@ -68,6 +69,7 @@ export const LiveVideo = ({ participant }: LiveVideoProps) => {
   return (
     <div ref={wrapperRef} className="relative h-full flex">
       <video ref={videoRef} width="100%" />
+      <ConnectionStats />
       <div className="absolute top-0 h-full w-full opacity-0 hover:opacity-100 hover:transition-all">
         <div className="absolute bottom-0 flex h-14 w-full items-center justify-between bg-gradient-to-r from-neutral-900 px-4">
           <VolumeControl

@@ -9,6 +9,8 @@ import {
 } from "@livekit/components-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBlockStore } from "@/store/use-block-store";
+import { useRouter } from "next/navigation";
 
 import { OfflineVideo } from "./offline-video";
 import { LoadingVideo } from "./loading-video";
@@ -25,6 +27,8 @@ export const Video = ({ hostName, hostIdentity }: VideoProps) => {
   const connectionState = useConnectionState();
   const participant = useRemoteParticipant(hostIdentity);
   const [isBlocked, setIsBlocked] = useState(false);
+  const router = useRouter();
+  const { isUserBlocked, addBlockedUser } = useBlockStore();
   const tracks = useTracks([
     Track.Source.Camera,
     Track.Source.Microphone,
@@ -55,7 +59,14 @@ export const Video = ({ hostName, hostIdentity }: VideoProps) => {
           },
         });
 
-        setIsBlocked(!!(blockedBySelf || blockedByHost));
+        const isBlockedNow = !!(blockedBySelf || blockedByHost);
+
+        if (isBlockedNow) {
+          setIsBlocked(true);
+          addBlockedUser(hostIdentity);
+          // Force reload the page
+          window.location.href = "/";
+        }
       } catch {
         setIsBlocked(false);
       }
@@ -64,11 +75,11 @@ export const Video = ({ hostName, hostIdentity }: VideoProps) => {
     checkBlocked();
     const interval = setInterval(checkBlocked, 1000); // Check more frequently
     return () => clearInterval(interval);
-  }, [hostIdentity]);
+  }, [hostIdentity, addBlockedUser]);
 
   let content;
 
-  if (isBlocked) {
+  if (isBlocked || isUserBlocked(hostIdentity)) {
     content = <OfflineVideo username={hostName} />;
   } else if (!participant && connectionState === ConnectionState.Connected) {
     content = <OfflineVideo username={hostName} />;

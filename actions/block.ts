@@ -1,22 +1,32 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { RoomServiceClient } from "livekit-server-sdk";
+import { RoomServiceClient, DataPacket_Kind } from "livekit-server-sdk";
 import { AxiosError } from "axios";
 
 import { getSelf } from "@/lib/auth-service";
 import { blockUser, unblockUser } from "@/lib/block-service";
 import { db } from "@/lib/db";
-import { LiveKitRoom } from "@livekit/components-react";
 
 let roomService: RoomServiceClient | null = null;
 
 const getRoomService = () => {
   if (!roomService) {
+    const apiUrl = process.env.LIVEKIT_API_URL;
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+
+    if (!apiUrl || !apiKey || !apiSecret) {
+      throw new Error("Missing LiveKit credentials");
+    }
+
+    // Ensure the URL starts with http:// or https://
+    const formattedUrl = apiUrl.startsWith('http') ? apiUrl : `https://${apiUrl}`;
+
     roomService = new RoomServiceClient(
-      process.env.LIVEKIT_API_URL!,
-      process.env.LIVEKIT_API_KEY!,
-      process.env.LIVEKIT_API_SECRET!
+      formattedUrl,
+      apiKey,
+      apiSecret
     );
   }
   return roomService;
@@ -150,6 +160,23 @@ export const onBlock = async (id: string) => {
       );
 
       if (blockedParticipant) {
+        // Send a message to the blocked user before removing them
+        const message = {
+          type: "block",
+          message: "You have been blocked from this stream",
+          blockedBy: self.id,
+          blockedUser: otherUser.id
+        };
+
+        await roomService.sendData(
+          room.name,
+          new TextEncoder().encode(JSON.stringify(message)),
+          DataPacket_Kind.RELIABLE
+        );
+
+        // Add a small delay to ensure the message is received
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Remove the blocked user from the room
         await roomService.removeParticipant(room.name, blockedParticipant.sid);
       }

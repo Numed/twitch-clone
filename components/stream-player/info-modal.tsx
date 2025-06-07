@@ -33,7 +33,6 @@ export const InfoModal = ({
   const router = useRouter();
   const closeRef = useRef<ElementRef<"button">>(null);
   const [isPending, startTransition] = useTransition();
-
   const [name, setName] = useState(initialName);
   const [thumbnailUrl, setThumbnailUrl] = useState(initialThumbnailUrl);
 
@@ -42,7 +41,8 @@ export const InfoModal = ({
       updateStream({ thumbnail: null })
         .then(() => {
           toast.success("Thumbnail removed");
-          setThumbnailUrl("");
+          setThumbnailUrl(null);
+          router.refresh();
           closeRef?.current?.click();
         })
         .catch(() => toast.error("Something went wrong"));
@@ -56,14 +56,36 @@ export const InfoModal = ({
       updateStream({ title: name })
         .then(() => {
           toast.success("Stream updated");
+          router.refresh();
           closeRef?.current?.click();
         })
         .catch(() => toast.error("Something went wrong"));
     });
   };
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setName(e.target.value);
+  const onUploadComplete = (res: any) => {
+    if (res?.[0]?.url) {
+      setThumbnailUrl(res[0].url);
+      startTransition(() => {
+        updateStream({ thumbnail: res[0].url })
+          .then(() => {
+            toast.success("Thumbnail updated");
+            router.refresh();
+            closeRef?.current?.click();
+          })
+          .catch(() => toast.error("Something went wrong"));
+      });
+    }
+  };
+
+  const onUploadError = (error: Error) => {
+    // Ignore development errors
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Development upload error:", error);
+      return;
+    }
+    console.error("Upload error:", error);
+    toast.error("Failed to upload thumbnail");
   };
 
   return (
@@ -81,10 +103,10 @@ export const InfoModal = ({
           <div className="space-y-2">
             <Label>Name</Label>
             <Input
-              disabled={isPending}
               placeholder="Stream name"
-              onChange={onChange}
+              onChange={(e) => setName(e.target.value)}
               value={name}
+              disabled={isPending}
             />
           </div>
           <div className="space-y-2">
@@ -122,11 +144,8 @@ export const InfoModal = ({
                       color: "#FFFFFF",
                     },
                   }}
-                  onClientUploadComplete={(res: any) => {
-                    setThumbnailUrl(res?.[0]?.url);
-                    router.refresh();
-                    closeRef?.current?.click();
-                  }}
+                  onClientUploadComplete={onUploadComplete}
+                  onUploadError={onUploadError}
                 />
               </div>
             )}

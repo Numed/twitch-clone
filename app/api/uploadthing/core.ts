@@ -15,19 +15,28 @@ export const ourFileRouter = {
     .middleware(async () => {
       const self = await getSelf();
 
+      if (!self) {
+        throw new Error("Unauthorized");
+      }
+
       return { user: self };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      await db.stream.update({
-        where: {
-          userId: metadata.user.id,
-        },
-        data: {
-          thumbnail: file.url,
-        },
-      });
+      try {
+        await db.stream.update({
+          where: {
+            userId: metadata.user.id,
+          },
+          data: {
+            thumbnail: file.url,
+          },
+        });
 
-      return { fileUrl: file.url };
+        return { fileUrl: file.url };
+      } catch (error) {
+        console.error("Error updating thumbnail:", error);
+        throw new Error("Failed to update thumbnail");
+      }
     }),
 } satisfies FileRouter;
 

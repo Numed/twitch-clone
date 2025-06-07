@@ -12,19 +12,21 @@ export const useViewerToken = (hostIdentity: string) => {
     const createToken = async () => {
       try {
         const viewrToken = await createViewerToken(hostIdentity);
-        setToken(viewrToken);
+        if (viewrToken) {
+          setToken(viewrToken);
 
-        const decodedToken = jwtDecode(viewrToken) as JwtPayload & {
-          name?: string;
-        };
-        const name = decodedToken?.name;
-        const identity = decodedToken?.jti;
+          const decodedToken = jwtDecode(viewrToken) as JwtPayload & {
+            name?: string;
+          };
+          const name = decodedToken?.name;
+          const identity = decodedToken.sub;
 
-        if (identity) {
-          setIdentity(identity);
-        }
-        if (name) {
-          setName(name);
+          if (identity) {
+            setIdentity(identity);
+          }
+          if (name) {
+            setName(name);
+          }
         }
       } catch (e) {
         toast.error("Failed to create token");
