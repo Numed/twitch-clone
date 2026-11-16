@@ -1,37 +1,43 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Live Streaming Platform
 
-## Getting Started
+A Twitch-style platform where users go live from OBS, watch streams in the browser and chat in real time.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-ngrok http --domain=viper-related-thoroughly.ngrok-free.app 3000
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Live video streaming with low latency, powered by LiveKit
+- Real-time chat for every stream, with host moderation controls
+- Authentication and user profiles with Clerk, synced to the database through webhooks
+- Follow and block system
+- Creator dashboard: stream keys, chat settings, community management
+- Stream thumbnail uploads
+- Light and dark themes
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js (App Router, Server Actions), React, TypeScript |
+| Streaming | LiveKit (client, server SDK, React components) |
+| Data | Prisma, MongoDB |
+| Auth | Clerk, Svix webhooks |
+| State | Zustand |
+| UI | Tailwind CSS, shadcn/ui (Radix UI), TanStack Table |
+| Uploads | UploadThing |
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Project structure
 
-## Learn More
+- `app/` - routes and layouts
+- `actions/` - server actions
+- `components/` - UI components
+- `hooks/`, `store/` - client hooks and Zustand stores
+- `lib/` - services and data access
+- `prisma/` - database schema
 
-To learn more about Next.js, take a look at the following resources:
+## Getting started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Install dependencies: `npm install`
+2. Copy `.env.example` to `.env` and fill in the Clerk, LiveKit, UploadThing and database keys
+3. Generate the Prisma client: `npx prisma generate`
+4. Start the dev server: `npm run dev`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Clerk and LiveKit webhooks need a public URL in development, for example through ngrok.
